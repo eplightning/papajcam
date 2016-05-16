@@ -10,9 +10,9 @@
 using namespace Gst;
 
 
-VideoRecorder::VideoRecorder(std::shared_ptr<LightDetection> &light, const std::string &directory,
-                             const VideoRecorderSettings &settings) :
-    m_light(light), m_directory(directory), m_settings(settings)
+VideoRecorder::VideoRecorder(std::shared_ptr<LightDetection> &light,
+                             const ApplicationSettings &settings) :
+    m_settings(settings), m_light(light)
 {
     m_recording = false;
     m_waiting_for_eos = false;
@@ -21,7 +21,7 @@ VideoRecorder::VideoRecorder(std::shared_ptr<LightDetection> &light, const std::
 
 std::string VideoRecorder::generate_filename()
 {
-    std::string path(m_directory);
+    std::string path(m_settings.output_path);
 
     if (path.back() != '/' && path.back() != '\\')
         path += '/';
@@ -70,15 +70,15 @@ bool VideoRecorder::setup_pipeline()
     videoSrc->property("do-timestamp", true)
             ->property("device", Glib::ustring(m_settings.video_device));
 
-    videoEncoder->property("pass", 0)->property("bitrate", m_settings.bitrate)
-                ->property("speed-preset", m_settings.speed_preset)
+    videoEncoder->property("pass", 0)->property("bitrate", m_settings.video_bitrate)
+                ->property("speed-preset", m_settings.video_speedpreset)
                 ->property("byte-stream", true);
 
     //audioSrc->property_device().set_value(m_settings.audio_device);
     //audioSrc->property_do_timestamp().set_value(true);
 
     // ograniczenia
-    Glib::RefPtr<Caps> videoCaps = Caps::create_from_string(m_settings.video_cads);
+    Glib::RefPtr<Caps> videoCaps = Caps::create_from_string(m_settings.video_caps);
     Glib::RefPtr<Caps> audioCaps = Caps::create_any();
 
     // wrzucamy wszystko do pipeline'a

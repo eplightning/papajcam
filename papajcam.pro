@@ -12,7 +12,8 @@ unix: PKGCONFIG += gstreamermm-1.0
 
 HEADERS += \
     lightdetection.h \
-    videorecorder.h
+    videorecorder.h \
+    appsettings.h
 
 unix: PKGCONFIG += sigc++-2.0
 unix: PKGCONFIG += glibmm-2.4
