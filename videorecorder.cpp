@@ -6,6 +6,7 @@
 #include <glibmm/datetime.h>
 #include <glibmm/ustring.h>
 #include <gstreamermm/valve.h>
+#include <gstreamermm/tee.h>
 
 using namespace Gst;
 
@@ -65,6 +66,7 @@ bool VideoRecorder::setup_pipeline()
     // dodatkowe elementy, zawory
     Glib::RefPtr<Valve> valve1 = Valve::create();
     Glib::RefPtr<Valve> valve2 = Valve::create();
+    Glib::RefPtr<Tee> tee1 = Tee::create();
 
     // ustawienia elementów
     videoSrc->property("do-timestamp", true)
@@ -83,23 +85,52 @@ bool VideoRecorder::setup_pipeline()
 
     // wrzucamy wszystko do pipeline'a
     m_pipeline->add(videoSrc)->add(videoConvert)->add(videoEncoder)->add(muxer)->add(fileSink)
-              ->add(queue1)->add(queue2)->add(valve1);
+              ->add(queue1)->add(queue2)->add(valve1)->add(tee1);
 
     //m_pipeline->add(audioSrc)->add(audioConvert)->add(audioEncoder)->add(queue3)->add(queue4)
     //          ->add(valve2);
 
     // łączenie przebiegu video
     videoSrc->link(valve1, videoCaps)->link(queue1)->link(videoConvert)->link(videoEncoder)
-            ->link(queue2);
+            ->link(queue2)->link(tee1);
 
     // łączenie przebiegu audio
     //audioSrc->link(valve2, audioCaps)->link(queue3)->link(audioConvert)->link(audioEncoder)
     //        ->link(queue4);
 
     // muxer
-    queue2->get_static_pad("src")->link(muxer->get_request_pad("video_0"));
+    tee1->get_request_pad("src_0")->link(muxer->get_request_pad("video_0"));
+    //queue2->get_static_pad("src")->link(muxer->get_request_pad("video_0"));
     //queue4->get_static_pad("src")->link(muxer->get_request_pad("audio_0"));
     muxer->link(fileSink);
+
+    /*if (m_settings.streaming_enable) {
+        Glib::RefPtr<Element> payloader = ElementFactory::create_element("rtph264pay");
+        Glib::RefPtr<Element> bin = ElementFactory::create_element("rtpbin");
+        Glib::RefPtr<Element> udp = ElementFactory::create_element("udpsink");
+        Glib::RefPtr<Element> udp2 = ElementFactory::create_element("udpsink");
+
+        if (!payloader || !bin || !udp || !udp2) {
+            std::cout << "[VideoRecorder] Podstawowe elementy gstreamer'a dot. strumieniowania nie mogły zostać utworzone";
+            return false;
+        }
+
+        m_pipeline->add(payloader)->add(bin)->add(udp)->add(udp2);
+        //m_pipeline->add(udp);
+
+        //udp->set_property("sync", false);
+        udp->set_property("async", false);
+        udp->set_property("port", 81);
+        //udp2->set_property("sync", false);
+        udp2->set_property("async", false);
+        udp2->set_property("port", m_settings.streaming_port + 1);
+
+        //tee1->get_request_pad("src_1")->link(udp->get_static_pad("sink"));
+        tee1->get_request_pad("src_1")->link(payloader->get_static_pad("sink"));
+        payloader->get_static_pad("src")->link(bin->get_request_pad("send_rtp_sink_0"));
+        bin->get_static_pad("send_rtp_src_0")->link(udp->get_static_pad("sink"));
+        bin->get_request_pad("send_rtcp_src_0")->link(udp2->get_static_pad("sink"));
+    }*/
 
     m_valve_video = valve1;
     m_queue_video = queue1;

@@ -13,6 +13,9 @@ struct ApplicationSettings {
     int light_seconds;
     int video_bitrate;
     int video_speedpreset;
+    bool invert_value;
+    bool streaming_enable;
+    int streaming_port;
 };
 
 #endif // APPSETTINGS_H

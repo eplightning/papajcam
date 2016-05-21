@@ -6,13 +6,14 @@
 #include <giomm/file.h>
 #include <glibmm/main.h>
 
-LightDetection::LightDetection(const std::string &filename, unsigned int seconds)
+LightDetection::LightDetection(const std::string &filename, unsigned int seconds, bool invert)
 {
     m_filename = filename;
     m_seconds = seconds;
     m_file = Gio::File::create_for_path(filename);
     m_monitor = m_file->monitor_file();
     m_is_waiting = false;
+    m_invert = invert;
     m_initial_value = read_value(m_file);
     m_value = m_initial_value;
 
@@ -52,8 +53,8 @@ void LightDetection::on_timeout()
     }
 
     if (m_value == read_value(m_file)) {
-        m_changed_signal.emit(m_value);
         std::cout << "[LightDetection] Wartość została zmieniona pomyślnie" << std::endl;
+        m_changed_signal.emit(m_value);
     } else {
         std::cout << "[LightDetection] Zmiana wartości zignorowana" << std::endl;
     }
@@ -71,6 +72,9 @@ bool LightDetection::read_value(const Glib::RefPtr<Gio::File> &file)
         std::cout << "[LightDetection] Nie można było odczytać bajtu z pliku, uznajemy że wartość 0" << std::endl;
         return false;
     }
+
+    if (m_invert)
+        return buf[0] == '1' ? false : true;
 
     return buf[0] == '1' ? true : false;
 }

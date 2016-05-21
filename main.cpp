@@ -17,6 +17,9 @@
 #define VIDEO_SPEEDPRESET 1
 #define VIDEO_DEVICE "/dev/video0"
 #define VIDEO_OUTPUT_PATH "/tmp"
+#define STREAMING_ENABLE 1
+#define STREAMING_PORT 5000
+#define INVERT_VALUE 1
 
 ApplicationSettings get_settings_cmdline(int argc, char *argv[])
 {
@@ -29,6 +32,9 @@ ApplicationSettings get_settings_cmdline(int argc, char *argv[])
     settings.video_caps = VIDEO_CAPS;
     settings.video_speedpreset = VIDEO_SPEEDPRESET;
     settings.video_device = VIDEO_DEVICE;
+    settings.streaming_enable = STREAMING_ENABLE;
+    settings.streaming_port = STREAMING_PORT;
+    settings.invert_value = INVERT_VALUE;
 
     Glib::OptionGroup pathesGroup("settings", "application settings");
     Glib::OptionEntry pathDetector;
@@ -55,6 +61,12 @@ ApplicationSettings get_settings_cmdline(int argc, char *argv[])
     Glib::OptionEntry videoSpeedPreset;
     videoSpeedPreset.set_short_name('p');
     videoSpeedPreset.set_long_name("video-speed-preset");
+    Glib::OptionEntry streamingEnable;
+    streamingEnable.set_long_name("enable-streaming");
+    Glib::OptionEntry streamingPort;
+    streamingPort.set_long_name("streaming-port");
+    Glib::OptionEntry invertValue;
+    invertValue.set_long_name("invert-value");
 
     pathesGroup.add_entry_filename(pathDetector, settings.input_path);
     pathesGroup.add_entry_filename(pathOutput, settings.output_path);
@@ -64,6 +76,9 @@ ApplicationSettings get_settings_cmdline(int argc, char *argv[])
     pathesGroup.add_entry(videoCaps, settings.video_caps);
     pathesGroup.add_entry(videoDevice, settings.video_device);
     pathesGroup.add_entry(videoSpeedPreset, settings.video_speedpreset);
+    pathesGroup.add_entry(streamingEnable, settings.streaming_enable);
+    pathesGroup.add_entry(streamingPort, settings.streaming_port);
+    pathesGroup.add_entry(invertValue, settings.invert_value);
 
     Glib::OptionContext context;
 
@@ -84,7 +99,8 @@ int main(int argc, char *argv[])
 
     Glib::RefPtr<Glib::MainLoop> main_loop = Glib::MainLoop::create();
 
-    std::shared_ptr<LightDetection> light(new LightDetection(app_settings.input_path, app_settings.light_seconds));
+    std::shared_ptr<LightDetection> light(new LightDetection(app_settings.input_path, app_settings.light_seconds,
+                                                             app_settings.invert_value));
 
     std::shared_ptr<VideoRecorder> recorder(new VideoRecorder(light, app_settings));
 
