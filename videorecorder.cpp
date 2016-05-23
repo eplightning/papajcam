@@ -175,7 +175,7 @@ void VideoRecorder::on_light(bool value)
             return;
         }
 
-        std::cout << "[VideoRecorder] Kończenie nagrywania video ..." << std::endl;
+        std::cout << "[VideoRecorder] Konczenie nagrywania video ..." << std::endl;
 
         // zakręcami korki od źródeł
         m_valve_video->property_drop().set_value(true);
@@ -195,7 +195,7 @@ bool VideoRecorder::on_bus_message(const Glib::RefPtr<Bus> &, const Glib::RefPtr
         if (!m_waiting_for_eos)
             return true;
 
-        std::cout << "[VideoRecorder] Nagrywanie video zakończone ..." << std::endl;
+        std::cout << "[VideoRecorder] Nagrywanie video zakonczone ..." << std::endl;
 
         m_waiting_for_eos = false;
 

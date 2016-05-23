@@ -19,7 +19,7 @@
 #define VIDEO_OUTPUT_PATH "/tmp"
 #define STREAMING_ENABLE 1
 #define STREAMING_PORT 5000
-#define INVERT_VALUE 1
+#define INVERT_VALUE 0
 
 ApplicationSettings get_settings_cmdline(int argc, char *argv[])
 {

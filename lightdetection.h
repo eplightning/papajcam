@@ -4,13 +4,12 @@
 #include <string>
 
 #include <glibmm/main.h>
-#include <giomm/filemonitor.h>
-#include <giomm/file.h>
 
 class LightDetection
 {
 public:
     LightDetection(const std::string &filename, unsigned int seconds, bool invert);
+    ~LightDetection();
 
     typedef sigc::signal<void, bool> type_changed_signal;
     type_changed_signal changed_signal();
@@ -18,15 +17,13 @@ public:
     bool initial_value() const;
 
 private:
-    void on_changed(const Glib::RefPtr<Gio::File> &file, const Glib::RefPtr<Gio::File> &other_file,
-                    Gio::FileMonitorEvent event_type);
+    bool on_changed(Glib::IOCondition condition);
 
     void on_timeout();
 
-    bool read_value(const Glib::RefPtr<Gio::File> &file);
+    bool read_value(int fd);
 
-    Glib::RefPtr<Gio::FileMonitor> m_monitor;
-    Glib::RefPtr<Gio::File> m_file;
+    int m_fd;
     std::string m_filename;
     unsigned int m_seconds;
     bool m_invert;

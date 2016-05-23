@@ -1,23 +1,35 @@
 #include "lightdetection.h"
 
 #include <iostream>
+#include <fcntl.h>
+#include <unistd.h>
 
-#include <giomm/filemonitor.h>
-#include <giomm/file.h>
 #include <glibmm/main.h>
 
 LightDetection::LightDetection(const std::string &filename, unsigned int seconds, bool invert)
 {
     m_filename = filename;
+
+    m_fd = open(filename.c_str(), O_RDONLY);
+
+    if (m_fd < 0) {
+        std::cout << "[LightDetection] Nie mozna otworzyc pliku wejsciowego";
+        throw new std::exception();
+    }
+
     m_seconds = seconds;
-    m_file = Gio::File::create_for_path(filename);
-    m_monitor = m_file->monitor_file();
     m_is_waiting = false;
     m_invert = invert;
-    m_initial_value = read_value(m_file);
+    m_initial_value = read_value(m_fd);
     m_value = m_initial_value;
 
-    m_monitor->signal_changed().connect(sigc::mem_fun(this, &LightDetection::on_changed));
+    Glib::signal_io().connect(sigc::mem_fun(this, &LightDetection::on_changed), m_fd, Glib::IO_PRI, Glib::PRIORITY_DEFAULT);
+}
+
+LightDetection::~LightDetection()
+{
+    if (m_fd >= 0)
+        close(m_fd);
 }
 
 LightDetection::type_changed_signal LightDetection::changed_signal()
@@ -25,24 +37,25 @@ LightDetection::type_changed_signal LightDetection::changed_signal()
     return m_changed_signal;
 }
 
-void LightDetection::on_changed(const Glib::RefPtr<Gio::File> &file, const Glib::RefPtr<Gio::File> &other_file,
-                                Gio::FileMonitorEvent event_type)
+bool LightDetection::on_changed(Glib::IOCondition condition)
 {
-    if (event_type != Gio::FileMonitorEvent::FILE_MONITOR_EVENT_CHANGED)
-        return;
+    if (condition != Glib::IO_PRI)
+        return true;
 
     if (m_is_waiting)
-        return;
+        return true;
 
-    bool val = read_value(file);
+    bool val = read_value(m_fd);
 
     if (val == m_value)
-        return;
+        return true;
 
     m_value = val;
     m_is_waiting = true;
 
     Glib::signal_timeout().connect_seconds_once(sigc::mem_fun(this, &LightDetection::on_timeout), m_seconds);
+
+    return true;
 }
 
 void LightDetection::on_timeout()
@@ -52,8 +65,8 @@ void LightDetection::on_timeout()
         return;
     }
 
-    if (m_value == read_value(m_file)) {
-        std::cout << "[LightDetection] Wartość została zmieniona pomyślnie" << std::endl;
+    if (m_value == read_value(m_fd)) {
+        std::cout << "[LightDetection] Wartosc zostala zmieniona pomyslnie" << std::endl;
         m_changed_signal.emit(m_value);
     } else {
         std::cout << "[LightDetection] Zmiana wartości zignorowana" << std::endl;
@@ -62,14 +75,14 @@ void LightDetection::on_timeout()
     m_is_waiting = false;
 }
 
-bool LightDetection::read_value(const Glib::RefPtr<Gio::File> &file)
+bool LightDetection::read_value(int file)
 {
-    Glib::RefPtr<Gio::FileInputStream> stream = file->read();
+    lseek(file, 0, SEEK_SET);
 
     char buf[1];
 
-    if (stream->read(buf, 1) != 1) {
-        std::cout << "[LightDetection] Nie można było odczytać bajtu z pliku, uznajemy że wartość 0" << std::endl;
+    if (read(file, buf, 1) != 1) {
+        std::cout << "[LightDetection] Nie można bylo odczytac bajtu z pliku, uznajemy że wartosc 0" << std::endl;
         return false;
     }
 
